@@ -14,6 +14,24 @@ git clone --depth 1 https://github.com/intezer/yara-rules intezer_rules
 # McAfee rules
 git clone --depth 1 https://github.com/advanced-threat-research/Yara-Rules mcafee_rules
 
+# Stratosphere rules
+git clone --depth 1 https://github.com/stratosphereips/yara-rules stratosphere_rules
+
+# ReversingLabs rules
+git clone --depth 1 https://github.com/reversinglabs/reversinglabs-yara-rules reversinglabs_rules
+
+# YaraHunts rules
+git clone --depth 1 https://github.com/sbousseaden/YaraHunts samir_rules
+
+# Inquest rules
+git clone --depth 1 https://github.com/InQuest/yara-rules inquest_rules
+
+# DailyIOC
+git clone --depth 1 https://github.com/StrangerealIntel/DailyIOC daily_ioc_rules
+
+# FireEye
+git clone --depth 1 https://github.com/fireeye/red_team_tool_countermeasures fireeye_rules
+
 # Yara community rules
 git clone --depth 1 https://github.com/Yara-Rules/rules.git
 community_yara_index="/opt/deploy/yara/rules/index.yar"
@@ -42,7 +60,14 @@ rm generic_anomalies.yar general_cloaking.yar thor_inverse_matches.yar yara_mixe
 
 # Download rules for quark-engine analyzer
 cd /opt/deploy
-svn export https://github.com/quark-engine/quark-engine/tags/v20.08/quark/rules quark-rules
-
+git clone https://github.com/quark-engine/quark-rules quark-rules
+# this is done to lock the version since the repo does not have tags.
+cd quark-rules
+git reset --hard b2cca423ed3c0786e6e41b2cb277676ed66d7854
 # chown directories
 chown -R www-data:www-data /opt/deploy/yara /opt/deploy/quark-rules
+
+cd /opt/deploy
+
+# Clone dictionaries for dnstwist analyzer
+svn export https://github.com/elceef/dnstwist/tags/20201022/dictionaries dnstwist-dictionaries

@@ -2,8 +2,11 @@
 .vscode
 __pycache__
 test_files
-env_file_app
-env_file_postgres
-env_file_integrations
+docker/env_file_app
+docker/env_file_postgres
+docker/env_file_integrations
+docker/custom.override.yml
 venv/
-docker-compose-override.yml
+intel_owl_test_env/
+compose-elk.yml
+docs/build/

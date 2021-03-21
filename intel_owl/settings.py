@@ -41,11 +41,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.postgres",
+    "memoize",
     "rest_framework",
-    "rest_framework_simplejwt.token_blacklist",
+    "durin",
     "guardian",
     "api_app.apps.ApiAppConfig",
     "django_elasticsearch_dsl",
+    "django_nose",
 ]
 
 MIDDLEWARE = [
@@ -83,10 +85,22 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "durin.auth.CachedTokenAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
+}
+
+TEST_RUNNER = "django_nose.NoseTestSuiteRunner"
+
+# Django-Rest-Durin
+REST_DURIN = {
+    "DEFAULT_TOKEN_TTL": timedelta(days=14),
+    "TOKEN_CHARACTER_LENGTH": 32,
+    "USER_SERIALIZER": "durin.serializers.UserSerializer",
+    "AUTH_HEADER_PREFIX": "Token",
+    "TOKEN_CACHE_TIMEOUT": 300,  # 5 minutes
+    "REFRESH_TOKEN_ON_LOGIN": True,
 }
 
 DB_HOST = secrets.get_secret("DB_HOST")
@@ -104,26 +118,6 @@ DATABASES = {
         "USER": DB_USER,
         "PASSWORD": DB_PASSWORD,
     },
-}
-
-# Simple JWT Stuff
-
-CLIENT_TOKEN_LIFETIME_DAYS = int(os.environ.get("PYINTELOWL_TOKEN_LIFETIME", 7))
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "ALGORITHM": "HS512",
-    "SIGNING_KEY": SECRET_KEY,
-    "AUTH_HEADER_TYPES": ("Token",),
-    "USER_ID_FIELD": "id",
-    "USER_ID_CLAIM": "user_id",
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
-    "JTI_CLAIM": "jti",
-    "PYINTELOWL_TOKEN_LIFETIME": timedelta(days=CLIENT_TOKEN_LIFETIME_DAYS),
 }
 
 # Elastic Search Configuration
@@ -154,7 +148,11 @@ CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 # these two are needed to enable priority and correct tasks execution
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_TASK_DEFAULT_QUEUE = "analyzers_queue"
+CELERY_QUEUES = os.environ.get("CELERY_QUEUES", "default").split(",")
+# this is to avoid RAM issues caused by long usage of this tool
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 200
+# value is in kilobytes
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 4000
 
 AWS_SQS = os.environ.get("AWS_SQS", False) == "True"
 if AWS_SQS:
@@ -224,7 +222,6 @@ LOGGING = {
     "formatters": {
         "stdfmt": {
             "format": "%(asctime)s - %(name)s - %(funcName)s - %(levelname)s - %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     },
     "handlers": {

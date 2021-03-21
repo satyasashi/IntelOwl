@@ -1,12 +1,9 @@
-<img src="static_intel/intel_owl.jpeg" width=500 height=200 alt="Intel Owl"/>
+<img src="static_intel/intel_owl_positive.png" width=547 height=150 alt="Intel Owl"/>
 
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/intelowlproject/IntelOwl.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/intelowlproject/IntelOwl/context:python)
 [![CodeFactor](https://www.codefactor.io/repository/github/intelowlproject/intelowl/badge)](https://www.codefactor.io/repository/github/intelowlproject/intelowl)
-[![Build Status](https://travis-ci.com/intelowlproject/IntelOwl.svg?branch=master)](https://travis-ci.org/intelowlproject/IntelOwl)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-
-<img src="static_intel/xscode-banner.png" width=600 height=125 alt="Get Support"/><br/>
-_For urgent issues and priority support, visit [https://xscode.com/intelowlproject/IntelOwl](https://xscode.com/intelowlproject/IntelOwl)._
+![Build & Tests](https://github.com/intelowlproject/IntelOwl/workflows/Build%20&%20Tests/badge.svg)
 
 # Intel Owl
 
@@ -22,7 +19,7 @@ Intel Owl is an Open Source Intelligence, or OSINT solution to get threat intell
 - This application is built to **scale out** and to **speed up the retrieval of threat info**.
 - It can be integrated easily in your stack of security tools ([pyintelowl](https://github.com/intelowlproject/pyintelowl)) to automate common jobs usually performed, for instance, by SOC analysts manually.
 - Intel Owl is composed of **analyzers** that can be run to retrieve data from external sources (like VirusTotal or AbuseIPDB) or to generate intel from internal analyzers (like Yara or Oletools)
-- API written in Django and Python 3.7.
+- API written in Django and Python 3.8.
 - Inbuilt frontend client: **[IntelOwl-ng](https://github.com/intelowlproject/IntelOwl-ng)** provides features such as dashboard, visualizations of analysis data, easy to use forms for requesting new analysis, etc. [Live Demo](https://intelowlclient.firebaseapp.com/).
 
 ## Documentation
@@ -43,9 +40,15 @@ To know more about the project and it's growth over time, you may be interested 
 
 You can see the full list of all available analyzers in the [documentation](https://intelowl.readthedocs.io/en/latest/Usage.html#available-analyzers) or [live demo](https://intelowlclient.firebaseapp.com/pages/analyzers/table).
 
-| Inbuilt modules 	| External Services 	| Free modules that require additional configuration 	|
-|-	|-	|-	|
-| - Static Document, RTF, PDF, PE, Generic File Analysis<br>- Strings analysis with ML<br>- PE Emulation with Speakeasy<br>- PE Signature verification<br>- PE Capabilities Extraction<br>- Emulated Javascript Analysis<br>- Android Malware Analysis<br>- SPF and DMARC Validator<br>- more... 	| - GreyNoise v2<br>- Intezer Scan<br>- VirusTotal v2+v3<br>- HybridAnalysis<br>- Censys.io<br>- Shodan<br>- AlienVault OTX<br>- Threatminer<br>- Abuse.ch<br>- many more.. 	| - Cuckoo (requires at least one working Cuckoo instance)<br>- MISP (requires at least one working MISP instance)<br>- Yara (Community, Neo23x0, Intezer and McAfee rules are already available. There's the chance to add your own rules) 	|
+| Type                                               | Analyzers Available                                                                                                                                                                                                                                                                                            |
+|----------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Inbuilt modules                                    | - Static Document, RTF, PDF, PE, Generic File Analysis<br/> - Strings analysis with ML<br/> - PE Emulation with Speakeasy<br/> - PE Signature verification<br/> - PE Capabilities Extraction<br/> - Emulated Javascript Analysis<br/> - Android Malware Analysis<br/> - SPF and DMARC Validator<br/> - more... |
+| External services                                  | - GreyNoise v2<br/> - Intezer Scan<br/>  - VirusTotal v2+v3<br/>  - HybridAnalysis<br/>  - Censys.io<br/>  - Shodan<br/>  - AlienVault OTX<br/>  - Threatminer<br/>  - Abuse.ch<br/>  - many more..                                                                                                            |
+| Free modules that require additional configuration | - Cuckoo (requires at least one working Cuckoo instance)<br/>  - MISP (requires at least one working MISP instance)<br/>  - Yara (Community, Neo23x0, Intezer, McAfee rules are already available. There's the chance to add your own rules)                                                                   |
+
+## Premium support 
+<img src="static_intel/xscode-banner.png" width=500 height=150 alt="Get Support"/><br/>
+_For urgent issues and priority support, visit [https://xscode.com/intelowlproject/IntelOwl](https://xscode.com/intelowlproject/IntelOwl)._
 
 ## Legal notice
 
@@ -68,27 +71,46 @@ license terms.
 [yara-python](https://github.com/VirusTotal/yara-python),
 [GitPython](https://github.com/gitpython-developers/GitPython),
 [Yara community rules](https://github.com/Yara-Rules),
-[Neo23x0 Yara sigs](https://github.com/Neo23x0/signature-base),
-[Intezer Yara sigs](https://github.com/intezer/yara-rules),
-[McAfee Yara sigs](https://github.com/advanced-threat-research/Yara-Rules),
+[StrangerealIntel Daily Ioc Yara rules](https://github.com/StrangerealIntel/DailyIOC),
+[Neo23x0 Yara rules](https://github.com/Neo23x0/signature-base),
+[Intezer Yara rules](https://github.com/intezer/yara-rules),
+[McAfee Yara rules](https://github.com/advanced-threat-research/Yara-Rules),
+[Stratosphere Yara rules](https://github.com/stratosphereips/yara-rules),
+[FireEye Yara rules](https://github.com/fireeye/red_team_tool_countermeasures),
+[ReversingLabs Yara rules](https://github.com/reversinglabs/reversinglabs-yara-rules),
+[Samir Yara rules](https://github.com/sbousseaden/YaraHunts),
+[InQuest Yara rules](https://github.com/InQuest/yara-rules),
 [APKiD](https://github.com/rednaga/APKiD/blob/master/LICENSE.COMMERCIAL),
 [Box-JS](https://github.com/CapacitorSet/box-js/blob/master/LICENSE),
 [Capa](https://github.com/fireeye/capa/blob/master/LICENSE.txt),
 [Quark-Engine](https://github.com/quark-engine/quark-engine),
-[IntelX](https://intelx.io/terms-of-service)
+[IntelX](https://intelx.io/terms-of-service),
+[Speakeasy](https://github.com/fireeye/speakeasy),
+[Checkdmarc](https://github.com/domainaware/checkdmarc),
+[Manalyze](https://github.com/JusticeRage/Manalyze),
+[Qiling](https://github.com/qilingframework/qiling),
+[Renderton](https://github.com/GoogleChrome/rendertron/blob/main/LICENSE)
 
 ## Acknowledgments
 
+### Sponsors
+
 This project was created and will be upgraded thanks to the following organizations:
 
-<img style="margin-right: 2px" src="static_intel/Certego.png" alt="Certego Logo"/>
-<img style="border: 0.2px solid black" src="static_intel/logo-thp-100.png" alt="Honeynet.org logo">
+#### Certego
+<a href="https://www.certego.net"> <img style="margin-right: 2px" width=176 height=50 src="static_intel/Certego.png" alt="Certego Logo"/> </a>
+
+#### The Honeynet Project
+<a href="https://www.honeynet.org"> <img style="border: 0.2px solid black" width=115 height=150 src="static_intel/honeynet_logo.png" alt="Honeynet.org logo"> </a>
 
 #### Google Summer Of Code
 
-The project was accepted to the GSoC 2020 under the Honeynet Project!! A lot of [new features](https://www.honeynet.org/gsoc/gsoc-2020/google-summer-of-code-2020-project-ideas/#intel-owl-improvements) were developed by Eshaan Bansal ([Twitter](https://twitter.com/mask0fmydisguis)).
+Since its birth, this project has been partecipating to the GSoC under the Honeynet Project!
 
-Stay tuned for the upcoming GSoC 2021! Join the [Honeynet Slack chat](https://gsoc-slack.honeynet.org/) for more info.
+* 2020: a lot of [new features](https://www.honeynet.org/gsoc/gsoc-2020/google-summer-of-code-2020-project-ideas/#intel-owl-improvements) were developed by Eshaan Bansal ([Twitter](https://twitter.com/mask0fmydisguis)).
+* 2021: you? [Projects available](https://www.honeynet.org/gsoc/gsoc-2021/google-summer-of-code-2021-project-ideas/)
+
+Stay tuned for the upcoming GSoC! Join the [Honeynet Slack chat](https://gsoc-slack.honeynet.org/) for more info.
 
 ## About the author and maintainers
 
@@ -96,4 +118,6 @@ Feel free to contact the main developers at any time:
 - Matteo Lodi ([Twitter](https://twitter.com/matte_lodi)): Author and creator
 - Eshaan Bansal ([Twitter](https://twitter.com/mask0fmydisguis)): Principal maintainer
 
-We also have a dedicated twitter account for the project: [@intel_owl](https://twitter.com/intel_owl).
+We also have:
+- a dedicated twitter account for the project: [@intel_owl](https://twitter.com/intel_owl).
+- [official site](https://intelowlproject.github.io) hosted in Github Pages

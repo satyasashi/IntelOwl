@@ -10,7 +10,7 @@ from api_app.exceptions import (
     AnalyzerRunException,
     AnalyzerConfigurationException,
 )
-from .utils import get_basic_report_template, set_report_and_cleanup
+from .utils import get_basic_report_template
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,36 @@ class BaseAnalyzerMixin(metaclass=ABCMeta):
         In most cases, this would be overwritten.
         """
 
+    def _validate_result(self, result, level=0, max_recursion=190):
+        """
+        function to validate result, allowing to store inside postgres without errors.
+
+        If the character \u0000 is present in the string, postgres will throw an error
+
+        If an integer is bigger than max_int,
+        Mongodb is not capable to store and will throw an error.
+
+        If we have more than 200 recursion levels, every encoding
+        will throw a maximum_nested_object exception
+        """
+        if level == max_recursion:
+            logger.info(
+                f"We have reached max_recursion {max_recursion} level. "
+                f"The following object will be pruned {result} "
+            )
+            return None
+        if isinstance(result, dict):
+            for key, values in result.items():
+                result[key] = self._validate_result(values, level=level + 1)
+        elif isinstance(result, list):
+            for i, _ in enumerate(result):
+                result[i] = self._validate_result(result[i], level=level + 1)
+        elif isinstance(result, str):
+            return result.replace("\u0000", "")
+        elif isinstance(result, int) and result > 9223372036854775807:  # max int 8bytes
+            result = 9223372036854775807
+        return result
+
     def start(self):
         """
         Entrypoint function to execute the analyzer.
@@ -67,6 +97,7 @@ class BaseAnalyzerMixin(metaclass=ABCMeta):
             self.before_run()
             self.report = get_basic_report_template(self.analyzer_name)
             result = self.run()
+            result = self._validate_result(result)
             self.report["report"] = result
         except (AnalyzerConfigurationException, AnalyzerRunException) as e:
             self._handle_analyzer_exception(e)
@@ -77,7 +108,6 @@ class BaseAnalyzerMixin(metaclass=ABCMeta):
 
         # add process time
         self.report["process_time"] = time.time() - self.report["started_time"]
-        set_report_and_cleanup(self.job_id, self.report)
 
         self.after_run()
 
@@ -89,7 +119,7 @@ class BaseAnalyzerMixin(metaclass=ABCMeta):
             f" Analyzer error: '{err}'"
         )
         logger.error(error_message)
-        self.report["errors"].append(error_message)
+        self.report["errors"].append(str(err))
         self.report["success"] = False
 
     def _handle_base_exception(self, err):
@@ -202,7 +232,7 @@ class DockerBasedAnalyzer(metaclass=ABCMeta):
     poll_distance: int
 
     @staticmethod
-    def __raise_in_case_bad_request(name, resp):
+    def __raise_in_case_bad_request(name, resp, params_to_check=["key"]):
         """
         Raises:
             :class: `AnalyzerRunException`, if bad status code or no key in response
@@ -219,13 +249,14 @@ class DockerBasedAnalyzer(metaclass=ABCMeta):
             raise AnalyzerRunException(
                 f"Internal Server Error in {name} docker container"
             )
-        # check to make sure there was a valid key in response
-        key = resp.json().get("key", None)
-        if not key:
-            raise AnalyzerRunException(
-                "Unexpected Error. "
-                f"Please check log files under /var/log/intel_owl/{name.lower()}/"
-            )
+        # check to make sure there was a valid params in response
+        for param in params_to_check:
+            param_value = resp.json().get(param, None)
+            if not param_value:
+                raise AnalyzerRunException(
+                    "Unexpected Error. "
+                    f"Please check log files under /var/log/intel_owl/{name.lower()}/"
+                )
         # just in case couldn't catch the error manually
         resp.raise_for_status()
 
@@ -243,7 +274,7 @@ class DockerBasedAnalyzer(metaclass=ABCMeta):
         for chance in range(self.max_tries):
             time.sleep(self.poll_distance)
             logger.info(
-                f"Result Polling. Try #{chance+1}. Starting the query..."
+                f"Result Polling. Try #{chance + 1}. Starting the query..."
                 f"<-- {self.__repr__()}"
             )
             try:
@@ -253,7 +284,8 @@ class DockerBasedAnalyzer(metaclass=ABCMeta):
             status = json_data.get("status", None)
             if status and status == "running":
                 logger.info(
-                    f"Poll number #{chance+1}, status: 'running' <-- {self.__repr__()}"
+                    f"Poll number #{chance + 1}, "
+                    f"status: 'running' <-- {self.__repr__()}"
                 )
             else:
                 got_result = True
@@ -262,6 +294,13 @@ class DockerBasedAnalyzer(metaclass=ABCMeta):
         if not got_result:
             raise AnalyzerRunException("max polls tried without getting any result.")
         return json_data
+
+    def _raise_container_not_running(self):
+        raise AnalyzerConfigurationException(
+            f"{self.name} docker container is not running.\n"
+            f"You have to enable it using the appropriate "
+            f"parameter when executing start.py."
+        )
 
     def _docker_run(self, req_data, req_files=None):
         """
@@ -297,9 +336,7 @@ class DockerBasedAnalyzer(metaclass=ABCMeta):
             else:
                 resp1 = requests.post(self.url, json=req_data)
         except requests.exceptions.ConnectionError:
-            raise AnalyzerConfigurationException(
-                f"{self.name} docker container is not running."
-            )
+            self._raise_container_not_running()
 
         # step #2: raise AnalyzerRunException in case of error
         assert self.__raise_in_case_bad_request(self.name, resp1)
@@ -322,3 +359,23 @@ class DockerBasedAnalyzer(metaclass=ABCMeta):
             raise AnalyzerRunException(str(err))
 
         return report
+
+    def _docker_get(self):
+        """
+        Raises:
+            AnalyzerConfigurationException: In case docker service is not running
+            AnalyzerRunException: Any other error
+
+        Returns:
+            Response: Response object of request
+        """
+
+        # step #1: request new analysis
+        try:
+            resp = requests.get(url=self.url)
+        except requests.exceptions.ConnectionError:
+            self._raise_container_not_running()
+
+        # step #2: raise AnalyzerRunException in case of error
+        assert self.__raise_in_case_bad_request(self.name, resp, params_to_check=[])
+        return resp

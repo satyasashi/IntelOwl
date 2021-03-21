@@ -16,6 +16,7 @@ STATUS = [
     ("reported_without_fails", "reported_without_fails"),
     ("reported_with_fails", "reported_with_fails"),
     ("failed", "failed"),
+    ("killed", "killed"),
 ]
 
 
@@ -43,7 +44,7 @@ class Job(models.Model):
     md5 = models.CharField(max_length=32, blank=False)
     observable_name = models.CharField(max_length=512, blank=True)
     observable_classification = models.CharField(max_length=12, blank=True)
-    file_name = models.CharField(max_length=50, blank=True)
+    file_name = models.CharField(max_length=512, blank=True)
     file_mimetype = models.CharField(max_length=80, blank=True)
     status = models.CharField(
         max_length=32, blank=False, choices=STATUS, default="pending"

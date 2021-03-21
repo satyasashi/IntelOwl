@@ -11,16 +11,16 @@ from intel_owl import secrets
 class OTX(classes.ObservableAnalyzer):
     def set_config(self, additional_config_params):
         self.api_key_name = additional_config_params.get("api_key_name", "OTX_KEY")
-        self.__api_key = secrets.get_secret(self.api_key_name)
         self.verbose = additional_config_params.get("verbose", False)
 
     def run(self):
-        if not self.__api_key:
+        api_key = secrets.get_secret(self.api_key_name)
+        if not api_key:
             raise AnalyzerRunException(
                 f"No API key retrieved with name: {self.api_key_name}"
             )
 
-        otx = OTXv2.OTXv2(self.__api_key)
+        otx = OTXv2.OTXv2(api_key)
 
         obs_clsf = self.observable_classification
         to_analyze_observable = self.observable_name
@@ -46,24 +46,29 @@ class OTX(classes.ObservableAnalyzer):
             )
 
         result = {}
-        details = otx.get_indicator_details_full(otx_type, to_analyze_observable)
-
-        result["pulses"] = (
-            details.get("general", {}).get("pulse_info", {}).get("pulses", [])
-        )
-        # for some observables the output could really be overwhelming
-        if not self.verbose and result["pulses"]:
-            result["pulses"] = result["pulses"][:20]
-        result["geo"] = details.get("geo", {})
-        result["malware_samples"] = [
-            d.get("hash", "") for d in details.get("malware", {}).get("data", [])
-        ]
-        result["passive_dns"] = details.get("passive_dns", {}).get("passive_dns", [])
-        result["reputation"] = details.get("reputation", {}).get("reputation", None)
-        result["url_list"] = details.get("url_list", {}).get("url_list", [])
-        result["analysis"] = details.get("analysis", {}).get("analysis", {})
-        if not self.verbose:
-            if result["analysis"] and "plugins" in result["analysis"]:
-                result["analysis"]["plugins"] = "removed because too long"
+        try:
+            details = otx.get_indicator_details_full(otx_type, to_analyze_observable)
+        except (OTXv2.BadRequest, OTXv2.NotFound) as e:
+            result["error"] = str(e)
+        else:
+            result["pulses"] = (
+                details.get("general", {}).get("pulse_info", {}).get("pulses", [])
+            )
+            # for some observables the output could really be overwhelming
+            if not self.verbose and result["pulses"]:
+                result["pulses"] = result["pulses"][:20]
+            result["geo"] = details.get("geo", {})
+            result["malware_samples"] = [
+                d.get("hash", "") for d in details.get("malware", {}).get("data", [])
+            ]
+            result["passive_dns"] = details.get("passive_dns", {}).get(
+                "passive_dns", []
+            )
+            result["reputation"] = details.get("reputation", {}).get("reputation", None)
+            result["url_list"] = details.get("url_list", {}).get("url_list", [])
+            result["analysis"] = details.get("analysis", {}).get("analysis", {})
+            if not self.verbose:
+                if result["analysis"] and "plugins" in result["analysis"]:
+                    result["analysis"]["plugins"] = "removed because too long"
 
         return result

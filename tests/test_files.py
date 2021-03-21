@@ -28,6 +28,11 @@ from api_app.script_analyzers.file_analyzers import (
     quark_engine,
     unpac_me,
     xlm_macro_deobfuscator,
+    triage_scan,
+    floss,
+    manalyze,
+    mwdb_scan,
+    qiling,
 )
 from api_app.script_analyzers.observable_analyzers import vt3_get
 
@@ -41,7 +46,7 @@ from .mock_utils import (
 
 from intel_owl import settings
 
-# disable logging library for travis
+# disable logging library for Continuous Integration
 if settings.DISABLE_LOGGING_TEST:
     logging.disable(logging.CRITICAL)
 
@@ -67,12 +72,31 @@ def mocked_vt_post(*args, **kwargs):
     return MockResponse({"scan_id": "scan_id_test", "data": {"id": "id_test"}}, 200)
 
 
+def mocked_mwdb_response(*args, **kwargs):
+    attrs = {"data": {"id": "id_test"}, "metakeys": {"karton": "test_analysis"}}
+    fileInfo = MagicMock()
+    fileInfo.configure_mock(**attrs)
+    QueryResponse = MagicMock()
+    attrs = {"query_file.return_value": fileInfo}
+    QueryResponse.configure_mock(**attrs)
+    Response = MagicMock(return_value=QueryResponse)
+    return Response
+
+
 def mocked_intezer(*args, **kwargs):
     return MockResponse({}, 201)
 
 
 def mocked_cuckoo_get(*args, **kwargs):
     return MockResponse({"task": {"status": "reported"}}, 200)
+
+
+def mocked_triage_get(*args, **kwargs):
+    return MockResponse({"tasks": {"task_1": {}, "task_2": {}}}, 200)
+
+
+def mocked_triage_post(*args, **kwargs):
+    return MockResponse({"id": "sample_id", "status": "pending"}, 200)
 
 
 class FileAnalyzersEXETests(TestCase):
@@ -96,7 +120,9 @@ class FileAnalyzersEXETests(TestCase):
         ).start()
         self.assertEqual(report.get("success", False), True)
 
-    def test_stringsinfo_ml_exe(self):
+    @mock_connections(patch("requests.get", side_effect=mocked_docker_analyzer_get))
+    @mock_connections(patch("requests.post", side_effect=mocked_docker_analyzer_post))
+    def test_stringsinfo_ml_exe(self, mock_get=None, mock_post=None):
         report = strings_info.StringsInfo(
             "Strings_Info_ML",
             self.job_id,
@@ -107,7 +133,9 @@ class FileAnalyzersEXETests(TestCase):
         ).start()
         self.assertEqual(report.get("success", False), True)
 
-    def test_stringsinfo_classic_exe(self):
+    @mock_connections(patch("requests.get", side_effect=mocked_docker_analyzer_get))
+    @mock_connections(patch("requests.post", side_effect=mocked_docker_analyzer_post))
+    def test_stringsinfo_classic_exe(self, mock_get=None, mock_post=None):
         report = strings_info.StringsInfo(
             "Strings_Info_Classic",
             self.job_id,
@@ -133,6 +161,19 @@ class FileAnalyzersEXETests(TestCase):
     def test_speakeasy_exe(self):
         report = speakeasy_emulation.SpeakEasy(
             "Speakeasy", self.job_id, self.filepath, self.filename, self.md5, {}
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    @mock_connections(patch("requests.get", side_effect=mocked_docker_analyzer_get))
+    @mock_connections(patch("requests.post", side_effect=mocked_docker_analyzer_post))
+    def test_qiling_exe(self, mock_get=None, mock_post=None):
+        report = qiling.Qiling(
+            "Qiling_Windows",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            {"os": "windows", "arch": "x86"},
         ).start()
         self.assertEqual(report.get("success", False), True)
 
@@ -184,13 +225,162 @@ class FileAnalyzersEXETests(TestCase):
         ).start()
         self.assertEqual(report.get("success", False), True)
 
-    def test_yara_exe(self):
+    def test_yara_mcafee(self):
+        additional_params = {
+            "directories_with_rules": [
+                "/opt/deploy/yara/mcafee_rules/APT",
+                "/opt/deploy/yara/mcafee_rules/RAT",
+                "/opt/deploy/yara/mcafee_rules/malware",
+                "/opt/deploy/yara/mcafee_rules/miners",
+                "/opt/deploy/yara/mcafee_rules/ransomware",
+                "/opt/deploy/yara/mcafee_rules/stealer",
+            ]
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_daily_ioc(self):
+        additional_params = {
+            "directories_with_rules": [
+                "/opt/deploy/yara/daily_ioc_rules",
+            ],
+            "recursive": True,
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_stratosphere(self):
+        additional_params = {
+            "directories_with_rules": [
+                "/opt/deploy/yara/stratosphere_rules/malware",
+                "/opt/deploy/yara/stratosphere_rules/protocols",
+            ]
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_inquest(self):
+        additional_params = {
+            "directories_with_rules": [
+                "/opt/deploy/yara/inquest_rules",
+                "/opt/deploy/yara/inquest_rules/labs.inquest.net",
+            ]
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_intezer(self):
+        additional_params = {
+            "directories_with_rules": [
+                "/opt/deploy/yara/intezer_rules",
+            ]
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_reversinglabs(self):
+        additional_params = {
+            "directories_with_rules": ["/opt/deploy/yara/reversinglabs_rules/yara"],
+            "recursive": True,
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_samir(self):
+        additional_params = {
+            "directories_with_rules": [
+                "/opt/deploy/yara/samir_rules",
+            ]
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_fireeye(self):
+        additional_params = {
+            "directories_with_rules": [
+                "/opt/deploy/yara/fireeye_rules/rules",
+            ],
+            "recursive": True,
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_florian(self):
+        additional_params = {
+            "directories_with_rules": [
+                "/opt/deploy/yara/signature-base/yara",
+            ]
+        }
+        report = yara_scan.YaraScan(
+            "Yara_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    def test_yara_community(self):
         additional_params = {
             "directories_with_rules": [
                 "/opt/deploy/yara/rules",
-                "/opt/deploy/yara/intezer_rules",
-                "/opt/deploy/yara/mcafee_rules",
-                "/opt/deploy/yara/signature-base/yara",
             ]
         }
         report = yara_scan.YaraScan(
@@ -263,6 +453,76 @@ class FileAnalyzersEXETests(TestCase):
             self.filename,
             self.md5,
             {},
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    @mock_connections(patch("requests.get", side_effect=mocked_triage_get))
+    @mock_connections(patch("requests.post", side_effect=mocked_triage_post))
+    def test_triage_scan(self, mock_get=None, mock_post=None):
+        report = triage_scan.TriageScanFile(
+            "Triage_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            {},
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    @mock_connections(patch("requests.get", side_effect=mocked_docker_analyzer_get))
+    @mock_connections(patch("requests.post", side_effect=mocked_docker_analyzer_post))
+    def test_floss(self, mock_get=None, mock_post=None):
+        report = floss.Floss(
+            "Floss",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            {},
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    @mock_connections(patch("requests.get", side_effect=mocked_docker_analyzer_get))
+    @mock_connections(patch("requests.post", side_effect=mocked_docker_analyzer_post))
+    def test_manalyze(self, mock_get=None, mock_post=None):
+        report = manalyze.Manalyze(
+            "Manalyze",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            {},
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    @patch("mwdblib.MWDB", side_effect=mocked_mwdb_response)
+    def test_mwdb_scan(self, mock_get=None, mock_post=None):
+        additional_params = {"api_key_name": "test_api", "upload_file": False}
+        report = mwdb_scan.MWDB_Scan(
+            "MWDB_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
+        ).start()
+        self.assertEqual(report.get("success", False), True)
+
+    @patch("mwdblib.MWDB", side_effect=mocked_mwdb_response)
+    @patch.object(mwdb_scan.MWDB_Scan, "file_analysis", return_value=True)
+    def test_mwdb_scan_uploadfile(self, mock_get=None, mock_post=None):
+        additional_params = {
+            "api_key_name": "test_api",
+            "upload_file": True,
+            "max_tries": 20,
+        }
+        report = mwdb_scan.MWDB_Scan(
+            "MWDB_Scan",
+            self.job_id,
+            self.filepath,
+            self.filename,
+            self.md5,
+            additional_params,
         ).start()
         self.assertEqual(report.get("success", False), True)
 
